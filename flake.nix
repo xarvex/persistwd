@@ -53,7 +53,8 @@
           settings = lib.mkOption {
             type = tomlFormat.type;
             default = {
-              users = builtins.mapAttrs (name: value: value.hashedPasswordFile) config.users.users;
+              users = builtins.mapAttrs (name: value: value.hashedPasswordFile)
+                (lib.filterAttrs (name: value: value.isNormalUser || value.uid == config.ids.uids.root) config.users.users);
             };
             example = lib.literalExpression ''
               {
