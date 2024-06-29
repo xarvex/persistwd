@@ -49,7 +49,7 @@
       {
         options.security.shadow.persistwd = {
           enable = lib.mkEnableOption "persistwd";
-          package = lib.mkPackageOption self.packages.${pkgs.system} "persistwd";
+          package = lib.mkPackageOption self.packages.${pkgs.system} "persistwd" { };
           settings = lib.mkOption {
             type = tomlFormat.type;
             default = {
