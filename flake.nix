@@ -74,6 +74,11 @@
             cfg = config.security.shadow.persistwd;
           in
           lib.mkIf (config.security.shadow.enable && cfg.enable) {
+            assertions = [{
+              assertion = !config.users.mutableUsers;
+              message = "persistwd only has a purpose with non-mutable users";
+            }];
+
             security.wrappers.passwd = {
               setuid = true;
               owner = "root";
