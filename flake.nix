@@ -17,6 +17,7 @@
         inherit (nixpkgs) lib;
 
         pkgs = import nixpkgs { inherit system; };
+        manifest = (pkgs.lib.importTOML ./Cargo.toml).package;
       in
       {
         packages = rec {
@@ -24,15 +25,17 @@
           persistwd =
             pkgs.rustPlatform.buildRustPackage
               rec {
-                pname = "persistwd";
-                version = "0.0.1";
+                inherit (manifest) version;
+
+                pname = manifest.name;
 
                 src = ./.;
                 cargoLock.lockFile = ./Cargo.lock;
 
                 meta = {
-                  description = "persistwd helps keep passwords persistent for non-mutable user setups";
-                  homepage = "https://gitlab.com/xarvex/persistwd";
+                  inherit (manifest) description;
+
+                  homepage = manifest.repository;
                   license = lib.licenses.mit;
                   maintainers = with lib.maintainers; [ xarvex ];
                   mainProgram = pname;
@@ -44,12 +47,13 @@
 
     flake.nixosModules.default = ({ config, lib, pkgs, ... }:
       let
+        selfPkgs = self.packages.${pkgs.system};
         tomlFormat = pkgs.formats.toml { };
       in
       {
         options.security.shadow.persistwd = {
           enable = lib.mkEnableOption "persistwd";
-          package = lib.mkPackageOption self.packages.${pkgs.system} "persistwd" { };
+          package = lib.mkPackageOption selfPkgs "persistwd" { };
           settings = lib.mkOption {
             type = tomlFormat.type;
             default = {
@@ -90,7 +94,7 @@
             systemd.services.persistwd = {
               enable = true;
               unitConfig = {
-                Description = [ "persistwd helps keep passwords persistent for non-mutable user setups" ];
+                Description = [ selfPkgs.persistwd.meta.description ];
                 After = [ "multi-user-pre.target" ];
                 PartOf = [ "multi-user.target" ];
               };

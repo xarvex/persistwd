@@ -1,7 +1,11 @@
 [package]
 name = "persistwd"
 version = "0.0.1"
+authors = ["Xarvex"]
 edition = "2021"
+rust-version = "1.74.1" # cargo-msrv on 2024-06-29
+description = "persistwd helps keep passwords persistent for non-mutable user setups"
+repository = "https://gitlab.com/xarvex/persistwd"
 
 [dependencies]
 clap = { version = "4.5.7", features = ["derive"] }
