@@ -29,7 +29,7 @@
 
                 pname = manifest.name;
 
-                src = ./.;
+                src = pkgs.lib.cleanSource ./.;
                 cargoLock.lockFile = ./Cargo.lock;
 
                 meta = {
