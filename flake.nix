@@ -22,6 +22,7 @@
       {
         packages = rec {
           default = persistwd;
+
           persistwd =
             pkgs.rustPlatform.buildRustPackage
               rec {
@@ -45,65 +46,69 @@
         };
       };
 
-    flake.nixosModules.default = ({ config, lib, pkgs, ... }:
-      let
-        selfPkgs = self.packages.${pkgs.system};
-        tomlFormat = pkgs.formats.toml { };
-      in
-      {
-        options.security.shadow.persistwd = {
-          enable = lib.mkEnableOption "persistwd";
-          package = lib.mkPackageOption selfPkgs "persistwd" { };
-          settings = lib.mkOption {
-            type = tomlFormat.type;
-            default = {
-              users = builtins.mapAttrs (name: value: value.hashedPasswordFile)
-                (lib.filterAttrs (name: value: value.isNormalUser || value.uid == config.ids.uids.root) config.users.users);
-            };
-            example = lib.literalExpression ''
-              {
-                users = {
-                  root = "/persist/etc/shadow/root";
-                  xarvex = "/persist/etc/shadow/xarvex";
+    flake.nixosModules = rec {
+      default = persistwd;
+
+      persistwd = ({ config, lib, pkgs, ... }:
+        let
+          selfPkgs = self.packages.${pkgs.system};
+          tomlFormat = pkgs.formats.toml { };
+        in
+        {
+          options.security.shadow.persistwd = {
+            enable = lib.mkEnableOption "persistwd";
+            package = lib.mkPackageOption selfPkgs "persistwd" { };
+            settings = lib.mkOption {
+              type = tomlFormat.type;
+              default = {
+                users = builtins.mapAttrs (name: value: value.hashedPasswordFile)
+                  (lib.filterAttrs (name: value: value.isNormalUser || value.uid == config.ids.uids.root) config.users.users);
+              };
+              example = lib.literalExpression ''
+                {
+                  users = {
+                    root = "/persist/etc/shadow/root";
+                    xarvex = "/persist/etc/shadow/xarvex";
+                  };
                 };
-              };
-            '';
-            description = ''
-              Configuration written to {file}`/etc/persistwd/config.toml`
-            '';
-          };
-        };
-
-        config =
-          let
-            cfg = config.security.shadow.persistwd;
-          in
-          lib.mkIf (config.security.shadow.enable && cfg.enable) {
-            assertions = [{
-              assertion = !config.users.mutableUsers;
-              message = "persistwd only has a purpose with non-mutable users";
-            }];
-
-            security.wrappers.passwd = {
-              setuid = true;
-              owner = "root";
-              group = "root";
-              source = "${config.security.loginDefs.package.out}/bin/passwd";
+              '';
+              description = ''
+                Configuration written to {file}`/etc/persistwd/config.toml`
+              '';
             };
-
-            systemd.services.persistwd = {
-              enable = true;
-              unitConfig = {
-                Description = [ selfPkgs.persistwd.meta.description ];
-                After = [ "multi-user-pre.target" ];
-                PartOf = [ "multi-user.target" ];
-              };
-              serviceConfig.ExecStart = lib.getExe cfg.package;
-              wantedBy = [ "multi-user.target" ];
-            };
-
-            environment.etc."persistwd/config.toml".source = tomlFormat.generate "persistwd-settings" cfg.settings;
           };
-      });
+
+          config =
+            let
+              cfg = config.security.shadow.persistwd;
+            in
+            lib.mkIf (config.security.shadow.enable && cfg.enable) {
+              assertions = [{
+                assertion = !config.users.mutableUsers;
+                message = "persistwd only has a purpose with non-mutable users";
+              }];
+
+              security.wrappers.passwd = {
+                setuid = true;
+                owner = "root";
+                group = "root";
+                source = "${config.security.loginDefs.package.out}/bin/passwd";
+              };
+
+              systemd.services.persistwd = {
+                enable = true;
+                unitConfig = {
+                  Description = [ selfPkgs.persistwd.meta.description ];
+                  After = [ "multi-user-pre.target" ];
+                  PartOf = [ "multi-user.target" ];
+                };
+                serviceConfig.ExecStart = lib.getExe cfg.package;
+                wantedBy = [ "multi-user.target" ];
+              };
+
+              environment.etc."persistwd/config.toml".source = tomlFormat.generate "persistwd-settings" cfg.settings;
+            };
+        });
+    };
   };
 }
