@@ -41,10 +41,11 @@ pub(super) fn duplicate_shadow(username: &str, path: &Path) -> () {
     let mut file = OpenOptions::new()
         .create(true)
         .write(true)
+        .truncate(true)
         .mode(0)
         .open(path)
         .unwrap();
-
     file.write_all((get_shadow_hash(username).unwrap() + "\n").as_bytes())
-        .unwrap()
+        .unwrap();
+    file.flush().unwrap()
 }
