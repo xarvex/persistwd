@@ -73,7 +73,7 @@
                 };
               '';
               description = ''
-                Configuration written to {file}`/etc/persistwd/config.toml`
+                Configuration used for persistwd
               '';
             };
           };
@@ -102,11 +102,9 @@
                   After = [ "multi-user-pre.target" ];
                   PartOf = [ "multi-user.target" ];
                 };
-                serviceConfig.ExecStart = lib.getExe cfg.package;
+                serviceConfig.ExecStart = "${lib.getExe cfg.package} -c ${tomlFormat.generate "persistwd-settings" cfg.settings}";
                 wantedBy = [ "multi-user.target" ];
               };
-
-              environment.etc."persistwd/config.toml".source = tomlFormat.generate "persistwd-settings" cfg.settings;
             };
         });
     };
