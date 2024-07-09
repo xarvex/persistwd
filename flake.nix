@@ -98,7 +98,7 @@
               systemd.services.persistwd = {
                 enable = true;
                 unitConfig = {
-                  Description = [ selfPkgs.persistwd.meta.description ];
+                  Description = [ "persistwd" ];
                   After = [ "multi-user-pre.target" ];
                   PartOf = [ "multi-user.target" ];
                 };
