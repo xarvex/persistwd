@@ -64,7 +64,7 @@
             default = persistwd;
 
             persistwd = {
-              dotenv.disableHint = true;
+              name = "persistwd";
 
               packages = with pkgs; [
                 cargo-edit
