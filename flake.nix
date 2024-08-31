@@ -29,13 +29,20 @@
     systems.url = "github:nix-systems/default-linux";
   };
 
-  outputs = { flake-parts, nixpkgs, self, ... }@inputs:
+  outputs =
+    {
+      flake-parts,
+      nixpkgs,
+      self,
+      ...
+    }@inputs:
     flake-parts.lib.mkFlake { inherit inputs; } {
       imports = [ inputs.devenv.flakeModule ];
 
       systems = import inputs.systems;
 
-      perSystem = { pkgs, system, ... }:
+      perSystem =
+        { pkgs, ... }:
         let
           inherit (nixpkgs) lib;
 
@@ -95,7 +102,13 @@
       flake.nixosModules = rec {
         default = persistwd;
 
-        persistwd = ({ config, lib, pkgs, ... }:
+        persistwd =
+          {
+            config,
+            lib,
+            pkgs,
+            ...
+          }:
           let
             cfg = config.security.shadow.persistwd;
 
@@ -107,10 +120,14 @@
               enable = lib.mkEnableOption "persistwd";
               package = lib.mkPackageOption selfPkgs "persistwd" { };
               settings = lib.mkOption {
-                type = tomlFormat.type;
+                inherit (tomlFormat) type;
+
                 default = {
-                  users = builtins.mapAttrs (name: value: value.hashedPasswordFile)
-                    (lib.filterAttrs (name: value: value.isNormalUser || value.uid == config.ids.uids.root) config.users.users);
+                  users = builtins.mapAttrs (_: value: value.hashedPasswordFile) (
+                    lib.filterAttrs (
+                      _: value: value.isNormalUser || value.uid == config.ids.uids.root
+                    ) config.users.users
+                  );
                 };
                 example = lib.literalExpression ''
                   {
@@ -125,10 +142,12 @@
             };
 
             config = lib.mkIf (config.security.shadow.enable && cfg.enable) {
-              assertions = [{
-                assertion = !config.users.mutableUsers;
-                message = "persistwd only has a purpose with non-mutable users";
-              }];
+              assertions = [
+                {
+                  assertion = !config.users.mutableUsers;
+                  message = "persistwd only has a purpose with non-mutable users";
+                }
+              ];
 
               security.wrappers.passwd = {
                 setuid = true;
@@ -148,7 +167,7 @@
                 wantedBy = [ "multi-user.target" ];
               };
             };
-          });
+          };
       };
     };
 }
