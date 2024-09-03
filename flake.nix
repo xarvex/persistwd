@@ -113,6 +113,8 @@
               };
             };
           };
+
+          formatter = pkgs.nixfmt-rfc-style;
         };
 
       flake.nixosModules = rec {
