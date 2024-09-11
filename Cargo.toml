@@ -14,3 +14,8 @@ libc = "0.2.158"
 notify = "6.1.1"
 serde = { version = "1.0.209", features = ["derive"] }
 toml = "0.8.19"
+
+[profile.release]
+opt-level = 3
+strip = true
+lto = true
