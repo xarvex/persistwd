@@ -6,7 +6,7 @@ use std::{
     path::Path,
 };
 
-// TODO: check error codes.
+// TODO: Check error codes.
 // Has been verified for memory safety.
 // Still, must create tests.
 fn get_shadow_hash(username: &str) -> Option<String> {
@@ -29,11 +29,11 @@ fn get_shadow_hash(username: &str) -> Option<String> {
     Some(hash.to_owned())
 }
 
-pub(super) fn duplicate_shadow(username: &str, path: &Path) -> () {
+pub(super) fn duplicate_shadow(username: &str, path: &Path) {
     if let Some(dir) = path.parent() {
         DirBuilder::new()
             .recursive(true)
-            .mode(0)
+            .mode(0o0)
             .create(dir)
             .unwrap();
     }
@@ -42,7 +42,7 @@ pub(super) fn duplicate_shadow(username: &str, path: &Path) -> () {
         .create(true)
         .write(true)
         .truncate(true)
-        .mode(0)
+        .mode(0o0)
         .open(path)
         .unwrap();
     file.write_all((get_shadow_hash(username).unwrap() + "\n").as_bytes())

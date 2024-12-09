@@ -60,7 +60,7 @@ fn main() {
                                 .expect("Fatal watching path");
                         }
 
-                        // TODO: possibly figure out which user changed?
+                        // TODO: Possibly figure out which user changed?
                         for (username, path) in &config.users {
                             duplicate_shadow(username, path)
                         }

@@ -25,12 +25,12 @@
   };
 
   outputs =
-    {
+    inputs@{
       flake-parts,
       nixpkgs,
       self,
       ...
-    }@inputs:
+    }:
     let
       inherit (nixpkgs) lib;
     in
@@ -42,23 +42,21 @@
       perSystem =
         { pkgs, ... }:
         let
-          manifest = (pkgs.lib.importTOML ./Cargo.toml).package;
+          manifest = (lib.importTOML ./Cargo.toml).package;
         in
         {
           packages = rec {
             default = persistwd;
 
             persistwd = pkgs.rustPlatform.buildRustPackage rec {
+              pname = manifest.name;
               inherit (manifest) version;
 
-              pname = manifest.name;
-
-              src = pkgs.lib.cleanSource ./.;
+              src = ./.;
               cargoLock.lockFile = ./Cargo.lock;
 
               meta = {
                 inherit (manifest) description;
-
                 homepage = manifest.repository;
                 license = lib.licenses.mit;
                 maintainers = with lib.maintainers; [ xarvex ];
@@ -76,7 +74,7 @@
                 let
                   devenvRoot = builtins.readFile inputs.devenv-root.outPath;
                 in
-                # If not overriden (/dev/null), --impure is necessary.
+                # If not overridden (/dev/null), --impure is necessary.
                 lib.mkIf (devenvRoot != "") devenvRoot;
 
               name = "persistwd";
@@ -86,6 +84,8 @@
                 cargo-edit
                 cargo-msrv
                 cargo-udeps
+
+                codespell
               ];
 
               languages = {
@@ -118,7 +118,8 @@
             ...
           }:
           let
-            cfg = config.security.shadow.persistwd;
+            cfg' = config.security.shadow;
+            cfg = cfg'.persistwd;
 
             selfPkgs = self.packages.${pkgs.system};
             tomlFormat = pkgs.formats.toml { };
@@ -129,19 +130,11 @@
               package = lib.mkPackageOption selfPkgs "persistwd" { };
               settings = lib.mkOption {
                 inherit (tomlFormat) type;
-
-                default = {
-                  users = builtins.mapAttrs (_: value: value.hashedPasswordFile) (
-                    lib.filterAttrs (
-                      _: value: value.isNormalUser || value.uid == config.ids.uids.root
-                    ) config.users.users
-                  );
-                };
                 example = lib.literalExpression ''
                   {
                     users = {
-                      root = "/persist/etc/shadow/root";
-                      xarvex = "/persist/etc/shadow/xarvex";
+                      root = "/etc/persistwd/shadow/root";
+                      xarvex = "/etc/persistwd/shadow/xarvex";
                     };
                   };
                 '';
@@ -149,7 +142,7 @@
               };
             };
 
-            config = lib.mkIf (config.security.shadow.enable && cfg.enable) {
+            config = lib.mkIf (cfg'.enable && cfg.enable) {
               assertions = [
                 {
                   assertion = !config.users.mutableUsers;
@@ -157,21 +150,27 @@
                 }
               ];
 
-              security.wrappers.passwd = {
-                setuid = true;
-                owner = "root";
-                group = "root";
-                source = "${config.security.loginDefs.package.out}/bin/passwd";
+              environment.etc."persistwd/config.toml".source =
+                tomlFormat.generate "persistwd-settings" cfg.settings;
+
+              security = {
+                shadow.persistwd.settings.users = builtins.mapAttrs (_: uCfg: uCfg.hashedPasswordFile) (
+                  lib.filterAttrs (_: uCfg: uCfg.isNormalUser || uCfg.uid == config.ids.uids.root) config.users.users
+                );
+
+                wrappers.passwd = {
+                  setuid = true;
+                  owner = "root";
+                  group = "root";
+                  source = "${config.security.loginDefs.package.out}/bin/passwd";
+                };
               };
 
               systemd.services.persistwd = {
-                enable = true;
-                unitConfig = {
-                  Description = [ "persistwd" ];
-                  After = [ "multi-user-pre.target" ];
-                  PartOf = [ "multi-user.target" ];
-                };
-                serviceConfig.ExecStart = "${lib.getExe cfg.package} -c ${tomlFormat.generate "persistwd-settings" cfg.settings}";
+                description = "persistwd";
+                after = [ "multi-user-pre.target" ];
+                partOf = [ "multi-user.target" ];
+                serviceConfig.ExecStart = "${lib.getExe cfg.package}";
                 wantedBy = [ "multi-user.target" ];
               };
             };
