@@ -39,9 +39,7 @@ fn main() {
         )
         .expect("Fatal initializing watcher");
 
-        let shadow_path = config
-            .shadow
-            .unwrap_or(Path::new("/etc/shadow").to_path_buf());
+        let shadow_path = Path::new("/etc/shadow").to_path_buf();
 
         watcher
             .watch(shadow_path.as_path(), RecursiveMode::NonRecursive)

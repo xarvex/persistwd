@@ -8,7 +8,6 @@ use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
-    pub shadow: Option<PathBuf>,
     pub users: HashMap<String, PathBuf>,
 }
 
