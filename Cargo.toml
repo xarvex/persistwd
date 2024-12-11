@@ -8,12 +8,16 @@ description = "persistwd helps keep passwords persistent for non-mutable user se
 repository = "https://gitlab.com/xarvex/persistwd"
 
 [dependencies]
-clap = { version = "4.5.16", features = ["derive"] }
-futures = "0.3.30"
-libc = "0.2.158"
-notify = "6.1.1"
-serde = { version = "1.0.209", features = ["derive"] }
+anyhow = "1.0.94"
+clap = { version = "4.5.23", features = ["derive"] }
+futures = "0.3.31"
+notify = "7.0.0"
+serde = { version = "1.0.215", features = ["derive"] }
+tokio = { version = "1.42.0", features = ["full"] }
 toml = "0.8.19"
+
+[build-dependencies]
+bindgen = "0.71.1"
 
 [profile.release]
 opt-level = 3

@@ -1,71 +1,98 @@
+mod bindings;
+mod cli;
 mod config;
 mod shadow;
 
-use std::path::{Path, PathBuf};
-
+use anyhow::{Context, Result};
 use clap::Parser;
+use cli::{Cli, Command};
+use config::Config;
 use futures::{SinkExt, StreamExt};
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
-use shadow::duplicate_shadow;
+use shadow::{populate_shadow, populate_shadow_hash, shadow_path};
 
-use self::config::Config;
+#[tokio::main]
+async fn main() -> Result<()> {
+    let cli = Cli::parse();
+    let config = Config::read(cli.config.as_deref())?;
 
-#[derive(Debug, Parser)]
-#[command(version, about, long_about = None)]
-struct Args {
-    #[arg(short, long)]
-    config: Option<PathBuf>,
-}
+    let shadow_path = shadow_path();
 
-fn main() {
-    let args = Args::parse();
-    let config = Config::read(args.config.as_deref());
-
-    // Initial creation for each user.
-    for (username, path) in &config.users {
-        duplicate_shadow(username, path)
-    }
-
-    futures::executor::block_on(async {
-        let (mut sender, mut receiver) = futures::channel::mpsc::channel(1);
-
-        let mut watcher = RecommendedWatcher::new(
-            move |res| {
-                futures::executor::block_on(async {
-                    sender.send(res).await.expect("Fatal sending response");
-                })
-            },
-            notify::Config::default(),
-        )
-        .expect("Fatal initializing watcher");
-
-        let shadow_path = Path::new("/etc/shadow").to_path_buf();
-
-        watcher
-            .watch(shadow_path.as_path(), RecursiveMode::NonRecursive)
-            .expect("Fatal watching path");
-
-        while let Some(res) = receiver.next().await {
-            match res {
-                Ok(event) => {
-                    if event.kind.is_create() || event.kind.is_modify() || event.kind.is_remove() {
-                        if event.kind.is_remove() {
-                            // Not actually a race condition, as the removal is
-                            // file /etc/shadow being overwritten by /etc/nshadow.
-                            // Must create new watch as file descriptor has changed.
-                            watcher
-                                .watch(&shadow_path, RecursiveMode::NonRecursive)
-                                .expect("Fatal watching path");
-                        }
-
-                        // TODO: Possibly figure out which user changed?
-                        for (username, path) in &config.users {
-                            duplicate_shadow(username, path)
-                        }
-                    }
+    match cli.command {
+        Command::PopulateHashes => {
+            for (username, path) in &config.users {
+                if let Err(e) = populate_shadow_hash(username, path) {
+                    eprintln!("Error populating shadow entry for {}: {}", username, e)
                 }
-                Err(e) => eprintln!("Watch error: {}", e),
             }
         }
-    })
+        Command::PopulateShadow => {
+            if let Err(e) = populate_shadow(&config.users) {
+                eprintln!("Error populating shadow: {}", e);
+            }
+        }
+        Command::Watch => {
+            for (username, path) in &config.users {
+                if let Err(e) = populate_shadow_hash(username, path) {
+                    eprintln!("Error populating shadow entry for {}: {}", username, e)
+                }
+            }
+
+            let (mut sender, mut receiver) = futures::channel::mpsc::channel(1);
+
+            let mut watcher = RecommendedWatcher::new(
+                move |res| {
+                    futures::executor::block_on(async {
+                        if let Err(e) = sender.send(res).await {
+                            eprintln!("Error sending response: {}", e);
+                        };
+                    })
+                },
+                notify::Config::default(),
+            )
+            .context("Failed initializing watcher")?;
+
+            watcher
+                .watch(shadow_path, RecursiveMode::NonRecursive)
+                .context(format!(
+                    "Failed to watch shadow file {}",
+                    shadow_path.display()
+                ))?;
+
+            while let Some(res) = receiver.next().await {
+                match res {
+                    Ok(event) => {
+                        if event.kind.is_create()
+                            || event.kind.is_modify()
+                            || event.kind.is_remove()
+                        {
+                            if event.kind.is_remove() {
+                                // Not actually a race condition, as the removal is
+                                // file /etc/shadow being overwritten by /etc/nshadow.
+                                // Must create new watch as file descriptor has changed.
+                                watcher
+                                    .watch(shadow_path, RecursiveMode::NonRecursive)
+                                    .context(format!(
+                                        "Failed to watch shadow file {}",
+                                        shadow_path.display()
+                                    ))?;
+                            }
+
+                            for (username, path) in &config.users {
+                                if let Err(e) = populate_shadow_hash(username, path) {
+                                    eprintln!(
+                                        "Error duplicating shadow entry for {}: {}",
+                                        username, e
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    Err(e) => eprintln!("Error watching shadow file: {}", e),
+                }
+            }
+        }
+    }
+
+    Ok(())
 }

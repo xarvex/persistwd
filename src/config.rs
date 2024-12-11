@@ -4,6 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use anyhow::{Context, Result};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -12,10 +13,13 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn read(config: Option<&Path>) -> Self {
+    pub fn read(config: Option<&Path>) -> Result<Self> {
+        let path = config.unwrap_or(Path::new("/etc/persistwd/config.toml"));
+
         toml::from_str(
-            &fs::read_to_string(config.unwrap_or(Path::new("/etc/persistwd/config.toml"))).unwrap(),
+            &fs::read_to_string(path)
+                .context(format!("Failed to read config at {}", path.display()))?,
         )
-        .unwrap()
+        .context(format!("Failed to parse config at {}", path.display()))
     }
 }

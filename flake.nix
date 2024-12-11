@@ -55,6 +55,9 @@
               src = ./.;
               cargoLock.lockFile = ./Cargo.lock;
 
+              nativeBuildInputs = with pkgs; [ rustPlatform.bindgenHook ];
+              buildInputs = with pkgs; [ glibc.dev ];
+
               meta = {
                 inherit (manifest) description;
                 homepage = manifest.repository;
@@ -86,6 +89,9 @@
                 cargo-udeps
 
                 codespell
+
+                glibc.dev
+                rustPlatform.bindgenHook
               ];
 
               languages = {
@@ -128,6 +134,39 @@
             options.security.shadow.persistwd = {
               enable = lib.mkEnableOption "persistwd";
               package = lib.mkPackageOption selfPkgs "persistwd" { };
+
+              users = lib.mkOption {
+                type = with lib.types; listOf str;
+                default = [ ];
+                example = [
+                  "root"
+                  "xarvex"
+                ];
+                description = ''
+                  Users for persistwd to manage.
+                  This will configure users.users.<user>.hashedPasswordFile for each user.
+                '';
+              };
+              directory = lib.mkOption {
+                type = lib.types.str;
+                default = "/etc/persistwd/shadow";
+                example = "/var/lib/persistwd/shadow";
+                description = ''
+                  The directory to put user shadow files.
+                  This affects users.users.<user>.hashedPasswordFile.
+                  Only relevant for the users set in security.shadow.persistwd.users.
+                '';
+              };
+              volume = lib.mkOption {
+                type = lib.types.str;
+                default = "";
+                example = "/persist";
+                description = ''
+                  The volume path to put before the users.users.<user>.hashedPasswordFile path.
+                  Only relevant for the users set in security.shadow.persistwd.users.
+                  This option is important because /etc/shadow is set up before persist mounts are made.
+                '';
+              };
               settings = lib.mkOption {
                 inherit (tomlFormat) type;
                 example = lib.literalExpression ''
@@ -154,8 +193,8 @@
                 tomlFormat.generate "persistwd-settings" cfg.settings;
 
               security = {
-                shadow.persistwd.settings.users = builtins.mapAttrs (_: uCfg: uCfg.hashedPasswordFile) (
-                  lib.filterAttrs (_: uCfg: uCfg.isNormalUser || uCfg.uid == config.ids.uids.root) config.users.users
+                shadow.persistwd.settings.users = lib.genAttrs cfg.users (
+                  user: config.users.users.${user}.hashedPasswordFile
                 );
 
                 wrappers.passwd = {
@@ -170,9 +209,13 @@
                 description = "persistwd";
                 after = [ "multi-user-pre.target" ];
                 partOf = [ "multi-user.target" ];
-                serviceConfig.ExecStart = "${lib.getExe cfg.package}";
+                serviceConfig.ExecStart = "${lib.getExe cfg.package} watch";
                 wantedBy = [ "multi-user.target" ];
               };
+
+              users.users = lib.genAttrs cfg.users (user: {
+                hashedPasswordFile = lib.mkDefault "${cfg.volume}${cfg.directory}/${user}";
+              });
             };
           };
       };
