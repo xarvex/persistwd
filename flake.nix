@@ -189,8 +189,10 @@
                 }
               ];
 
-              environment.etc."persistwd/config.toml".source =
-                tomlFormat.generate "persistwd-settings" cfg.settings;
+              environment = {
+                systemPackages = with cfg; [ package ];
+                etc."persistwd/config.toml".source = tomlFormat.generate "persistwd-settings" cfg.settings;
+              };
 
               security = {
                 shadow.persistwd.settings.users = lib.genAttrs cfg.users (
