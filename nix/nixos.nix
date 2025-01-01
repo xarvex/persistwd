@@ -10,13 +10,12 @@ let
   cfg' = config.security.shadow;
   cfg = cfg'.persistwd;
 
-  selfPkgs = self.packages.${pkgs.system};
   tomlFormat = pkgs.formats.toml { };
 in
 {
   options.security.shadow.persistwd = {
     enable = lib.mkEnableOption "persistwd";
-    package = lib.mkPackageOption selfPkgs "persistwd" { };
+    package = lib.mkPackageOption self.packages.${pkgs.system} "persistwd" { };
 
     users = lib.mkOption {
       type = with lib.types; listOf str;
