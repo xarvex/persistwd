@@ -74,9 +74,9 @@ in
 
     environment = {
       systemPackages = with cfg; [ package ];
-      etc."persistwd/config.toml".source = lib.mkIf (
-        cfg.settings != { }
-      ) tomlFormat.generate "persistwd-settings" cfg.settings;
+      etc."persistwd/config.toml".source = lib.mkIf (cfg.settings != { }) (
+        tomlFormat.generate "persistwd-settings" cfg.settings
+      );
     };
 
     security = {
