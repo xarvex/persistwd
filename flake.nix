@@ -44,13 +44,11 @@
         {
           packages = rec {
             default = persistwd;
-
             persistwd = pkgs.callPackage ./nix/package.nix { };
           };
 
           devenv.shells = rec {
             default = persistwd;
-
             persistwd = import ./nix/devenv.nix { inherit inputs lib pkgs; };
           };
 
@@ -59,7 +57,6 @@
 
       flake.nixosModules = rec {
         default = persistwd;
-
         persistwd = import ./nix/nixos.nix { inherit self; };
       };
     };
