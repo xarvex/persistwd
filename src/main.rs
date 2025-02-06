@@ -3,6 +3,8 @@ mod cli;
 mod config;
 mod shadow;
 
+use std::process::Stdio;
+
 use anyhow::{Context, Result};
 use clap::Parser;
 use cli::{Cli, Command};
@@ -10,6 +12,7 @@ use config::Config;
 use futures::{SinkExt, StreamExt};
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 use shadow::{populate_shadow, populate_shadow_hash, shadow_path};
+use tokio::process;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -19,8 +22,36 @@ async fn main() -> Result<()> {
     let shadow_path = shadow_path();
 
     match cli.command {
-        Command::PopulateHashes => {
+        Command::PopulateHashes { passwd } => {
             for (username, path) in &config.users {
+                if passwd {
+                    match process::Command::new("passwd")
+                        .arg(username)
+                        .stdin(Stdio::inherit())
+                        .status()
+                        .await
+                    {
+                        Ok(status) => {
+                            if let Some(code) = status.code() {
+                                if let Some(message) = match code {
+                                    0 => None,
+                                    1 => Some("No permission"),
+                                    2 => Some("Invalid options"),
+                                    3 => Some("Unexpected failure"),
+                                    4 => Some("passwd file missing"),
+                                    5 => Some("passwd file busy"),
+                                    6 => Some("Invalid argument to option"),
+                                    _ => Some("Unknown failure"),
+                                } {
+                                    eprintln!("Error setting passwd for {}: {}", username, message);
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            eprintln!("Error setting passwd for {}: {}", username, e);
+                        }
+                    }
+                }
                 if let Err(e) = populate_shadow_hash(username, path) {
                     eprintln!("Error populating shadow entry for {}: {}", username, e)
                 }
@@ -92,7 +123,7 @@ async fn main() -> Result<()> {
                 }
             }
         }
-    }
+    };
 
     Ok(())
 }

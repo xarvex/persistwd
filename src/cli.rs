@@ -13,7 +13,10 @@ pub struct Cli {
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
-    PopulateHashes,
+    PopulateHashes {
+        #[arg(long)]
+        passwd: bool,
+    },
     PopulateShadow,
     Watch,
 }
