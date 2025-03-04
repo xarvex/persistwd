@@ -1,6 +1,6 @@
 {
+  glibc,
   lib,
-  pkgs,
   rustPlatform,
 }:
 
@@ -15,7 +15,7 @@ rustPlatform.buildRustPackage rec {
   cargoLock.lockFile = ../Cargo.lock;
 
   nativeBuildInputs = [ rustPlatform.bindgenHook ];
-  buildInputs = with pkgs; [ glibc.dev ];
+  buildInputs = [ glibc.dev ];
 
   meta = {
     inherit (manifest) description;
