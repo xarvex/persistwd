@@ -4,16 +4,11 @@ let
   inherit (self.checks.${pkgs.system}) pre-commit;
 in
 pkgs.mkShell {
-  nativeBuildInputs = with pkgs; [
-    cargo
-    rustc
-
-    rustPlatform.bindgenHook
-  ];
-  buildInputs =
+  nativeBuildInputs =
     pre-commit.enabledPackages
     ++ (with pkgs; [
-      glibc.dev
+      cargo
+      rustc
 
       clippy
       rust-analyzer
@@ -23,7 +18,10 @@ pkgs.mkShell {
       cargo-expand
       cargo-msrv
       cargo-udeps
+
+      rustPlatform.bindgenHook
     ]);
+  buildInputs = with pkgs; [ glibc.dev ];
 
   env = {
     RUST_BACKTRACE = 1;
