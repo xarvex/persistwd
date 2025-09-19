@@ -2,26 +2,26 @@
 name = "persistwd"
 version = "0.0.1"
 authors = ["Xarvex"]
-edition = "2021"
-rust-version = "1.82.0" # cargo-msrv on 2025-02-05
+edition = "2024"
+rust-version = "1.85.1" # cargo-msrv on 2025-08-28
 
 description = "persistwd helps keep passwords persistent for non-mutable user setups"
-repository = "https://gitlab.com/xarvex/persistwd"
-
+repository = "https://codeberg.org/xarvex/persistwd"
 
 [dependencies]
-anyhow = "1.0.95"
-clap = { version = "4.5.28", features = ["derive"] }
+anyhow = "1.0.99"
+clap = { version = "4.5.47", features = ["derive"] }
 futures = "0.3.31"
-notify = "8.0.0"
-serde = { version = "1.0.217", features = ["derive"] }
-tokio = { version = "1.43.0", features = ["full"] }
-toml = "0.8.20"
+notify = "8.2.0"
+serde = { version = "1.0.225", features = ["derive"] }
+tokio = { version = "1.47.1", features = ["full"] }
+toml = "0.9.7"
 
 [build-dependencies]
-bindgen = "0.71.1"
+bindgen = "0.72.1"
 
 [profile.release]
 opt-level = 3
 strip = true
 lto = true
+panic = "abort"

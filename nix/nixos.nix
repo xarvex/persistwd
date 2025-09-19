@@ -85,10 +85,10 @@ in
       );
 
       wrappers.passwd = {
+        source = "${config.security.loginDefs.package.out}/bin/passwd";
         setuid = true;
         owner = "root";
         group = "root";
-        source = "${config.security.loginDefs.package.out}/bin/passwd";
       };
     };
 
@@ -96,7 +96,9 @@ in
       description = "persistwd";
       after = [ "multi-user-pre.target" ];
       partOf = [ "multi-user.target" ];
+
       serviceConfig.ExecStart = "${lib.getExe cfg.package} watch";
+
       wantedBy = [ "multi-user.target" ];
     };
 

@@ -11,7 +11,14 @@ rustPlatform.buildRustPackage rec {
   pname = manifest.name;
   inherit (manifest) version;
 
-  src = ../.;
+  src = lib.fileset.toSource {
+    root = ../.;
+    fileset = lib.fileset.unions [
+      ../Cargo.lock
+      ../Cargo.toml
+      (lib.fileset.fileFilter (file: lib.strings.hasSuffix ".rs" file.name) ../.)
+    ];
+  };
   cargoLock.lockFile = ../Cargo.lock;
 
   nativeBuildInputs = [ rustPlatform.bindgenHook ];

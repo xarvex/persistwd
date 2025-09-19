@@ -8,7 +8,7 @@ use std::{
     sync::OnceLock,
 };
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 
 use crate::bindings;
 
@@ -123,7 +123,7 @@ pub fn populate_shadow(users: &HashMap<String, PathBuf>) -> Result<()> {
             return Err(anyhow!("Could not open new shadow file"));
         }
 
-        let mode = b"w\0".as_ptr() as *const i8;
+        let mode = c"w".as_ptr();
         unsafe { bindings::fdopen(fd, mode) }
     };
 
