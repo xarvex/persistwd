@@ -16,7 +16,13 @@ rustPlatform.buildRustPackage rec {
     fileset = lib.fileset.unions [
       ../Cargo.lock
       ../Cargo.toml
-      (lib.fileset.fileFilter (file: lib.strings.hasSuffix ".rs" file.name) ../.)
+      (lib.fileset.fileFilter (
+        file:
+        builtins.any (ext: lib.strings.hasSuffix ".${ext}" file.name) [
+          "h"
+          "rs"
+        ]
+      ) ../.)
     ];
   };
   cargoLock.lockFile = ../Cargo.lock;
